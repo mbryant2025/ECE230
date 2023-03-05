@@ -1,6 +1,5 @@
 from ece230 import ECE230
 from constants import *
-import sympy as sp
 from sympy.physics.units import *
 
 

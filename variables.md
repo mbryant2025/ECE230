@@ -187,14 +187,56 @@ ___
 |$J_{n*x}(x) = q\mu_nn(x)\varepsilon_x(x)+qD_n\frac{dn(x)}{dx}$ | Total current density of electrons|
 |$J_{p*x}(x) = q\mu_pp(x)\varepsilon_x(x)-qD_p\frac{dp(x)}{dx}$ | Total current density of holes|
 
+
+
+
+
+
+## Diodes   
+
+| Variable | Amount | Meaning |
+|:--------:|:-------:|:------:|
+| $\varrho(x)$ | $-qN_a^-$ (p-side depletion regtion) | Thermal-equilibrium net-charge-concentration distribution |
+| $\varrho(x)$ | $+qN_d^+$ (n-side depletion regtion)| Thermal-equilibrium net-charge-concentration distribution |
+| $\varrho(x)$ | $0$ (elsewhere)| Thermal-equilibrium net-charge-concentration distribution |
+| $\varepsilon^o_x(x)$ | $\frac{V}{cm}$ | E-field along diode |
+| $\varepsilon^o_x(x)$ | $\frac{-qN_a^-}{\epsilon_{Si}}$ (p-side depletion region) | E-field along diode |
+| $\varepsilon^o_x(x)$ | $\frac{-qN_d^-}{\epsilon_{Si}}$ (n-side depletion region) | E-field along diode |
+| $\varepsilon^o_x(x)$ | $0$ (elsewhere) | E-field along diode |
+| $\psi^o_x(x)$ | $V$ | Potential along diode |
+| $\psi^o_x(x)$ | $\varphi_P + \frac{qN_a^-}{2\epsilon_{Si}}$  | Potential along diode |
+| $\psi^o_x(x)$ | $\varphi_N - \frac{qN_d^-}{2\epsilon_{Si}}$  | Potential along diode |
+| $\varphi_P$ | $V$ | Potential of p-side |
+| $\varphi_N$ | $V$ | Potential of n-side |
+| $-W_P$| | Width of p-region |
+| $W_N$| | Width of n-region |
+| $-W_{d,P}$| | Width of p depletion region |
+| $W_{d,N}$| | Width of n depletion region |
+| $V_{bi}$ | $V$ | Built-in voltage |
+
+
+
+| Equation | Meaning/Description |
+|:--------:|:------:|
+| $p^o_{P} = N_a^-$ | p-side quasi-neutral hole concentration |
+| $n^o_{P} = \frac{n_i^2}{N_a^-}$ | p-side quasi-neutral electron concentration |
+| $p^o_{N} = \frac{n_i^2}{N_d^+}$ | n-side quasi-neutral hole concentration |
+| $n^o_{N} = N_d^+$ | n-side quasi-neutral electron concentration |
+
+___
+
 ## MOS Capacitors
 
 | Equation | Meaning/Description |
 |:--------:|:------:|
 | $Q_f = qN_f$ | Fixed oxide charge density|
 
+___
 
+## MOS
 
+| Variable | Amount | Meaning |
+|:--------:|:-------:|:------:|
 
 
 

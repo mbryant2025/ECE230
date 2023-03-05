@@ -8,12 +8,13 @@ class Diode(ECE230):
 
     def __init__(self, T = 300 * kelvin):
         super().__init__(T)
-        self.calculation_functions.extend([self.calc_V_bi, self.calc_V_bin, self.calc_V_bip, self.calc_W_dN, self.calc_W_dP,
+        self.calculation_functions.extend([self.calc_V_bi, self.calc_V_bin, self.calc_V_bip, self.calc_W_dN, self.calc_W_dP, self.calc_W_d,
                                             self.calc_po_N, self.calc_no_P, self.calc_p_N_edge, self.calc_n_P_edge,
                                             self.calc_N_B, self.calc_V_B, self.calc_mu_pP, self.calc_mu_nN, self.calc_mu_pN, self.calc_mu_nP,
                                             self.calc_D_nP, self.calc_D_pN, self.calc_D_nN, self.calc_D_pP,
                                             self.calc_tau_recP, self.calc_tau_recN, self.calc_tau_genP, self.calc_tau_genN,
-                                            self.calc_L_pN, self.calc_L_nP, self.calc_J_nxdiffP, self.calc_J_pxdiffN])
+                                            self.calc_L_pN, self.calc_L_nP, self.calc_pN, self.calc_nP, self.calc_J_nxdiffP, self.calc_J_pxdiffN,
+                                            self.calc_C_pndep_per_area, self.calc_C_pndep])
 
         diode_quantities = {
             'N_a': None, #Acceptor concentration
@@ -23,9 +24,13 @@ class Diode(ECE230):
             'V_bip': None, #Built-in voltage for p-type side
             'W_dN': None, #Depletion width for n-type side
             'W_dP': None, #Depletion width for p-type side
-            'V_PN': None, #PN junction voltage
+            'W_d': None, #Depletion width
+            'V_PN': 0 * volt, #PN junction voltage
             'po_N': None, #Hole concentration in n-type side at thermal equilibrium (minority carrier)
             'no_P': None, #Electron concentration in p-type side at thermal equilibrium (minority carrier)
+            'pN' : None, #The hole-concentration distribution in a long-base n-side quasi-neutral region
+            'nP' : None, #The electron concentration distribution in a long-base p-side quasi-neutral region
+            'x' : None, #The x coordinate
             'p_N_edge': None, #Hole concentration at the edge of the depletion region in n-type side (minority carrier)
             'n_P_edge': None, #Electron concentration at the edge of the depletion region in p-type side (minority carrier)
             'V_B' : None, #Breakdown voltage
@@ -46,7 +51,10 @@ class Diode(ECE230):
             'L_pN' : None, #Diffusion length for holes on n-type side
             'L_nP' : None, #Diffusion length for electrons on p-type side
             'J_nxdiffP' : None, #Electronurrent density for p-type side diffusion current
-            'J_pxdiffN' : None #Hole current density for n-type side diffusion current
+            'J_pxdiffN' : None, #Hole current density for n-type side diffusion current
+            'C_pn*dep_per_area' : None, #Capacitance of depletion region per unit area
+            'C_pn*dep' : None, #Capacitance of depletion region
+            'A' : None #Area
         }
 
         self.known_quantities.update(diode_quantities)
@@ -100,6 +108,14 @@ class Diode(ECE230):
         V_PN = remove_units(self.known_quantities['V_PN'])
         W_dn = sp.sqrt((2 * epsilon_Si_ / q_) * (N_a / (N_d * (N_a + N_d))) * (V_bi - V_PN)) * cm
         self.known_quantities['W_dN'] = W_dn
+
+    def calc_W_d(self):
+        if not self.should_calculate(needed=['W_dN', 'W_dP']):
+            return
+        W_dN = self.known_quantities['W_dN']
+        W_dP = self.known_quantities['W_dP']
+        W_d = W_dN + W_dP
+        self.known_quantities['W_d'] = W_d
 
     def calc_po_N(self):
         if not self.should_calculate(needed=['N_d', 'T']):
@@ -268,6 +284,28 @@ class Diode(ECE230):
             L_nP = sp.sqrt(tau_genP * D_nP)
         self.known_quantities['L_nP'] = L_nP
 
+    def calc_pN(self):
+        if not self.should_calculate(needed=['V_PN', 'x', 'W_dN', 'L_pN', 'po_N']):
+            return
+        x = self.known_quantities['x']
+        V_PN = self.known_quantities['V_PN']
+        W_dN = self.known_quantities['W_dN']
+        L_pN = self.known_quantities['L_pN']
+        po_N = self.known_quantities['po_N']
+        pN = po_N * sp.exp(-(x - W_dN) / L_pN) * (sp.exp(V_PN / k_BT_300K_DIVIDED_q) - 1) + po_N
+        self.known_quantities['pN'] = pN
+
+    def calc_nP(self):
+        if not self.should_calculate(needed=['V_PN', 'x', 'W_dP', 'L_nP', 'no_P']):
+            return
+        x = self.known_quantities['x']
+        V_PN = self.known_quantities['V_PN']
+        W_dP = self.known_quantities['W_dP']
+        L_nP = self.known_quantities['L_nP']
+        no_P = self.known_quantities['no_P']
+        nP = no_P * sp.exp((x + W_dP) / L_nP) * (sp.exp(V_PN / k_BT_300K_DIVIDED_q) - 1) + no_P
+        self.known_quantities['nP'] = nP
+
     def calc_J_pxdiffN(self):
         if not self.should_calculate(needed=['D_pN', 'L_pN', 'N_d', 'V_PN', 'T']):
             return
@@ -291,3 +329,22 @@ class Diode(ECE230):
         V_PN = self.known_quantities['V_PN']
         J_nxdiffP = (q * D_nP * n_i_300K**2) / (L_nP * N_a) * (sp.exp(V_PN / k_BT_300K_DIVIDED_q) - 1) * COULOUMBS_PER_SECOND_TO_AMPERES
         self.known_quantities['J_nxdiffP'] = J_nxdiffP
+
+    def calc_C_pndep_per_area(self):
+        if not self.should_calculate(needed=['N_d', 'N_a', 'V_PN', 'V_bi']):
+            return
+        N_a = remove_units(self.known_quantities['N_a'])
+        N_d = remove_units(self.known_quantities['N_d'])
+        V_PN = remove_units(self.known_quantities['V_PN'])
+        V_bi = remove_units(self.known_quantities['V_bi'])
+        C_pndep_per_area = sp.sqrt((q_ * epsilon_Si_ * N_a * N_d) / (2 * (N_d + N_a) * (V_bi - V_PN))) * farad / cm**2
+        self.known_quantities['C_pn*dep_per_area'] = C_pndep_per_area
+
+    def calc_C_pndep(self):
+        if not self.should_calculate(needed=['C_pn*dep_per_area', 'A']):
+            return
+        A = self.known_quantities['A']
+        C_pndep_per_area = self.known_quantities['C_pn*dep_per_area']
+        C_pndep = C_pndep_per_area * A
+        self.known_quantities['C_pn*dep'] = C_pndep
+
