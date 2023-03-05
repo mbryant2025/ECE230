@@ -14,7 +14,8 @@ class Diode(ECE230):
                                             self.calc_D_nP, self.calc_D_pN, self.calc_D_nN, self.calc_D_pP,
                                             self.calc_tau_recP, self.calc_tau_recN, self.calc_tau_genP, self.calc_tau_genN,
                                             self.calc_L_pN, self.calc_L_nP, self.calc_pN, self.calc_nP, self.calc_J_nxdiffP, self.calc_J_pxdiffN,
-                                            self.calc_C_pndep_per_area, self.calc_C_pndep])
+                                            self.calc_C_pndep_per_area, self.calc_C_pndep, self.calc_epsilon_x_max,
+                                            self.calc_tau_recSCR, self.calc_J_Dscr, self.calc_J_Sdiff, self.calc_J_Sscr, self.calc_J_D, self.calc_I_D])
 
         diode_quantities = {
             'N_a': None, #Acceptor concentration
@@ -54,7 +55,14 @@ class Diode(ECE230):
             'J_pxdiffN' : None, #Hole current density for n-type side diffusion current
             'C_pn*dep_per_area' : None, #Capacitance of depletion region per unit area
             'C_pn*dep' : None, #Capacitance of depletion region
-            'A' : None #Area
+            'A' : None, #Area
+            'epsilon_x_max' : None, #Maximum e-field in depletion region
+            'tau_recSCR' : None, #Space-charge-region recombination lifetime
+            'J_Dscr' : None, #Diode space-charge-recombination current
+            'J_Sdiff' : None, #Diffusion saturation current density
+            'J_Sscr' : None, #Space-charge-recombination saturation current density
+            'J_D' : None, #Diode current density
+            'I_D' : None #Diode current
         }
 
         self.known_quantities.update(diode_quantities)
@@ -348,3 +356,66 @@ class Diode(ECE230):
         C_pndep = C_pndep_per_area * A
         self.known_quantities['C_pn*dep'] = C_pndep
 
+    def calc_epsilon_x_max(self):
+        if not self.should_calculate(needed=['N_d', 'N_a', 'V_bi', 'V_PN']):
+            return
+        N_a = remove_units(self.known_quantities['N_a'])
+        N_d = remove_units(self.known_quantities['N_d'])
+        V_bi = remove_units(self.known_quantities['V_bi'])
+        V_PN = remove_units(self.known_quantities['V_PN'])
+        epsilon_x_max = -sp.sqrt(2 * q_ / epsilon_Si_ * (N_d * N_a) / (N_d + N_a) * (V_bi - V_PN))
+        self.known_quantities['epsilon_x_max'] = epsilon_x_max
+
+    def calc_tau_recSCR(self):
+        if not self.should_calculate(needed=['tau_recN', 'tau_recP']):
+            return
+        tau_recN = self.known_quantities['tau_recN']
+        tau_recP = self.known_quantities['tau_recP']
+        tau_recSCR = (tau_recN + tau_recP) / 2
+        self.known_quantities['tau_recSCR'] = tau_recSCR
+
+    def calc_J_Dscr(self):
+        if not self.should_calculate(needed=['W_d', 'tau_recSCR', 'V_PN']):
+            return
+        W_d = self.known_quantities['W_d']
+        tau_recSCR = self.known_quantities['tau_recSCR']
+        V_PN = self.known_quantities['V_PN']
+        J_Dscr = (q * n_i_300K * W_d) / (2 * tau_recSCR) * (sp.exp(V_PN / (2 * k_BT_300K_DIVIDED_q)) - 1) * COULOUMBS_PER_SECOND_TO_AMPERES
+        self.known_quantities['J_Dscr'] = J_Dscr
+
+    def calc_J_Sdiff(self):
+        if not self.should_calculate(needed=['D_nP', 'L_nP', 'N_a', 'D_pN', 'L_pN', 'N_d']):
+            return
+        D_nP = self.known_quantities['D_nP']
+        L_nP = self.known_quantities['L_nP']
+        N_a = self.known_quantities['N_a']
+        D_pN = self.known_quantities['D_pN']
+        L_pN = self.known_quantities['L_pN']
+        N_d = self.known_quantities['N_d']
+        J_Sdiff = (q * D_nP * n_i_300K**2) / (L_nP * N_a) + (q * D_pN * n_i_300K**2) / (L_pN * N_d)
+        self.known_quantities['J_Sdiff'] = J_Sdiff
+
+    def calc_J_Sscr(self):
+        if not self.should_calculate(needed=['W_d', 'tau_recSCR']):
+            return
+        W_d = self.known_quantities['W_d']
+        tau_recSCR = self.known_quantities['tau_recSCR']
+        J_Sscr = (q * n_i_300K * W_d) / (2 * tau_recSCR)
+        self.known_quantities['J_Sscr'] = J_Sscr
+
+    def calc_J_D(self):
+        if not self.should_calculate(needed=['J_Sdiff', 'J_Sscr', 'V_PN']):
+            return
+        J_Sdiff = self.known_quantities['J_Sdiff']
+        J_Sscr = self.known_quantities['J_Sscr']
+        V_PN = self.known_quantities['V_PN']
+        J_D = J_Sdiff * (sp.exp(V_PN / (k_BT_300K_DIVIDED_q)) - 1) + J_Sscr * (sp.exp(V_PN / (2 * k_BT_300K_DIVIDED_q)) - 1)
+        self.known_quantities['J_D'] = J_D
+
+    def calc_I_D(self):
+        if not self.should_calculate(needed=['J_D', 'A']):
+            return
+        J_D = self.known_quantities['J_D']
+        A = self.known_quantities['A']
+        I_D = J_D * A
+        self.known_quantities['I_D'] = I_D * COULOUMBS_PER_SECOND_TO_AMPERES
