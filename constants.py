@@ -103,10 +103,10 @@ k_B = 8.617385e-5 * units.eV / units.K
 k_B_ = 8.617385e-5
 """The Boltzmann constant in eV/K."""
 
-k_BT_300K = 0.025852 * units.eV
+k_BT_300K = 4.1419479804e-21 * units.eV
 """The thermal energy at 300K in eV."""
 
-k_BT_300K_ = 0.025852
+k_BT_300K_ = 4.1419479804e-21
 """The thermal energy at 300K in eV."""
 
 n_i_300K = 1.07e10 * units.cm**-3
@@ -192,6 +192,12 @@ epsilon_Si = 11.7 * epsilon0
 
 epsilon_Si_ = 11.7 * epsilon0_
 """The permittivity of silicon in F/cm."""
+
+epsilon_ox = 3.90 * epsilon0
+"""The permittivity of oxide in F/cm."""
+
+epsilon_ox_ = 3.90 * epsilon0_
+"""The permittivity of oxide in F/cm."""
 
 k_BT_300K_DIVIDED_q = 0.025852 * units.volt
 """The thermal energy at 300K in V."""

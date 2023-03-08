@@ -8,16 +8,19 @@ class Diode(ECE230):
 
     def __init__(self, T = 300 * kelvin):
         super().__init__(T)
-        self.calculation_functions.extend([self.calc_V_bi, self.calc_V_bin, self.calc_V_bip, self.calc_W_dN, self.calc_W_dP, self.calc_W_d,
+        self.calculation_functions.extend([self.calc_bias_mode, self.calc_V_bi, self.calc_V_bin, self.calc_V_bip, self.calc_W_dN, self.calc_W_dP, self.calc_W_d,
                                             self.calc_po_N, self.calc_no_P, self.calc_p_N_edge, self.calc_n_P_edge,
                                             self.calc_N_B, self.calc_V_B, self.calc_mu_pP, self.calc_mu_nN, self.calc_mu_pN, self.calc_mu_nP,
                                             self.calc_D_nP, self.calc_D_pN, self.calc_D_nN, self.calc_D_pP,
                                             self.calc_tau_recP, self.calc_tau_recN, self.calc_tau_genP, self.calc_tau_genN,
                                             self.calc_L_pN, self.calc_L_nP, self.calc_pN, self.calc_nP, self.calc_J_nxdiffP, self.calc_J_pxdiffN,
                                             self.calc_C_pndep_per_area, self.calc_C_pndep, self.calc_epsilon_x_max,
-                                            self.calc_tau_recSCR, self.calc_J_Dscr, self.calc_J_Sdiff, self.calc_J_Sscr, self.calc_J_D, self.calc_I_D])
+                                            self.calc_tau_recSCR, self.calc_J_Dscr, self.calc_J_Sdiff, self.calc_J_Sscr, self.calc_J_D, self.calc_I_D,
+                                            self.calc_tau_genSCR, self.calc_J_Dscg, self.calc_Q_pndep,
+                                           ])
 
         diode_quantities = {
+            'Bias_Mode': None, #Bias mode (forward or reverse)
             'N_a': None, #Acceptor concentration
             'N_d': None, #Donor concentration
             'V_bi': None, #Built-in voltage
@@ -26,12 +29,14 @@ class Diode(ECE230):
             'W_dN': None, #Depletion width for n-type side
             'W_dP': None, #Depletion width for p-type side
             'W_d': None, #Depletion width
-            'V_PN': 0 * volt, #PN junction voltage
+            'W_N': None, #Width of n-type side NOTE user input
+            'W_P': None, #Width of p-type side NOTE user input
+            'V_PN': 0 * volt, #PN junction voltage #NOTE user input
             'po_N': None, #Hole concentration in n-type side at thermal equilibrium (minority carrier)
             'no_P': None, #Electron concentration in p-type side at thermal equilibrium (minority carrier)
             'pN' : None, #The hole-concentration distribution in a long-base n-side quasi-neutral region
             'nP' : None, #The electron concentration distribution in a long-base p-side quasi-neutral region
-            'x' : None, #The x coordinate
+            'x' : None, #The x coordinate NOTE: user input
             'p_N_edge': None, #Hole concentration at the edge of the depletion region in n-type side (minority carrier)
             'n_P_edge': None, #Electron concentration at the edge of the depletion region in p-type side (minority carrier)
             'V_B' : None, #Breakdown voltage
@@ -55,14 +60,19 @@ class Diode(ECE230):
             'J_pxdiffN' : None, #Hole current density for n-type side diffusion current
             'C_pn*dep_per_area' : None, #Capacitance of depletion region per unit area
             'C_pn*dep' : None, #Capacitance of depletion region
-            'A' : None, #Area
+            'A' : None, #Area NOTE: user input
             'epsilon_x_max' : None, #Maximum e-field in depletion region
             'tau_recSCR' : None, #Space-charge-region recombination lifetime
+            'tau_genSCR' : None, #Space-charge-region generation lifetime
             'J_Dscr' : None, #Diode space-charge-recombination current
             'J_Sdiff' : None, #Diffusion saturation current density
             'J_Sscr' : None, #Space-charge-recombination saturation current density
             'J_D' : None, #Diode current density
-            'I_D' : None #Diode current
+            'I_D' : None, #Diode current
+            'J_Dscg' : None, #Diode space-charge-generation current density
+            'Q_pndep' : None, #Depletion charge density
+            'Q_pndiffP' : None, #p-side quais-neutral region electron diffusion charge density
+            'Q_pndiffN' : None #n-side quais-neutral region hole diffusion charge density
         }
 
         self.known_quantities.update(diode_quantities)
@@ -78,6 +88,15 @@ class Diode(ECE230):
         N_d = self.known_quantities['N_d']
         v_bi = k_BT_300K_DIVIDED_q * sp.log(N_a * N_d / n_i_300K**2)
         self.known_quantities['V_bi'] = v_bi
+
+    def calc_bias_mode(self):
+        if not self.should_calculate(needed=['V_PN']):
+            return
+        V_PN = self.known_quantities['V_PN']
+        if V_PN >= 0 * volt:
+            self.known_quantities['Bias_Mode'] = 'Forward'
+        else:
+            self.known_quantities['Bias_Mode'] = 'Reverse'
 
     def calc_V_bin(self):
         if not self.should_calculate(needed=['N_a', 'N_d', 'V_bi']):
@@ -302,6 +321,16 @@ class Diode(ECE230):
         po_N = self.known_quantities['po_N']
         pN = po_N * sp.exp(-(x - W_dN) / L_pN) * (sp.exp(V_PN / k_BT_300K_DIVIDED_q) - 1) + po_N
         self.known_quantities['pN'] = pN
+    
+    def _calc_pN_for_x(self, x):
+        if not self.should_calculate(needed=['V_PN', 'W_dN', 'L_pN', 'po_N']):
+            return
+        V_PN = self.known_quantities['V_PN']
+        W_dN = self.known_quantities['W_dN']
+        L_pN = self.known_quantities['L_pN']
+        po_N = self.known_quantities['po_N']
+        pN = po_N * sp.exp(-(x - W_dN) / L_pN) * (sp.exp(V_PN / k_BT_300K_DIVIDED_q) - 1) + po_N
+        return pN
 
     def calc_nP(self):
         if not self.should_calculate(needed=['V_PN', 'x', 'W_dP', 'L_nP', 'no_P']):
@@ -313,6 +342,16 @@ class Diode(ECE230):
         no_P = self.known_quantities['no_P']
         nP = no_P * sp.exp((x + W_dP) / L_nP) * (sp.exp(V_PN / k_BT_300K_DIVIDED_q) - 1) + no_P
         self.known_quantities['nP'] = nP
+
+    def _calc_nP_for_x(self, x):
+        if not self.should_calculate(needed=['V_PN', 'W_dP', 'L_nP', 'no_P']):
+            return
+        V_PN = self.known_quantities['V_PN']
+        W_dP = self.known_quantities['W_dP']
+        L_nP = self.known_quantities['L_nP']
+        no_P = self.known_quantities['no_P']
+        nP = no_P * sp.exp((x + W_dP) / L_nP) * (sp.exp(V_PN / k_BT_300K_DIVIDED_q) - 1) + no_P
+        return nP
 
     def calc_J_pxdiffN(self):
         if not self.should_calculate(needed=['D_pN', 'L_pN', 'N_d', 'V_PN', 'T']):
@@ -419,3 +458,55 @@ class Diode(ECE230):
         A = self.known_quantities['A']
         I_D = J_D * A
         self.known_quantities['I_D'] = I_D * COULOUMBS_PER_SECOND_TO_AMPERES
+
+    def calc_tau_genSCR(self):
+        #factor of 75 as before
+        if not self.should_calculate(needed=['tau_recSCR']):
+            return
+        tau_recSCR = self.known_quantities['tau_recSCR']
+        tau_genSCR = tau_recSCR * 75
+        self.known_quantities['tau_genSCR'] = tau_genSCR
+
+
+    def calc_J_Dscg(self):
+        if not self.should_calculate(needed=['W_d', 'tau_genSCR', 'V_PN']):
+            return
+        W_d = self.known_quantities['W_d']
+        tau_recSCR = self.known_quantities['tau_genSCR']
+        V_PN = self.known_quantities['V_PN']
+        J_Dscg = (q * n_i_300K * W_d) / (2 * tau_recSCR) * (sp.exp(V_PN / (2 * k_BT_300K_DIVIDED_q)) - 1) * COULOUMBS_PER_SECOND_TO_AMPERES
+        self.known_quantities['J_Dscg'] = J_Dscg
+
+    def calc_Q_pndep(self):
+        if self.should_calculate(needed=['N_d', 'W_dN']):
+            N_d = self.known_quantities['N_d']
+            W_dN = self.known_quantities['W_dN']
+            Q_pndep = q * N_d * W_dN
+            self.known_quantities['Q_pndep'] = Q_pndep
+            return
+        if self.should_calculate(needed=['N_a', 'W_dP']):
+            N_a = self.known_quantities['N_a']
+            W_dP = self.known_quantities['W_dP']
+            Q_pndep = q * N_a * W_dP
+            self.known_quantities['Q_pndep'] = Q_pndep
+            return
+        
+    def calc_Q_pndiffP(self):
+        if not self.should_calculate(needed=['no_P', 'W_P', 'W_dP']):
+            return
+        no_p = self.known_quantities['no_P']
+        W_P = self.known_quantities['W_P']
+        W_dP = self.known_quantities['W_dP']
+        #integrate _calc_nP_for_x(x) - no_P over x from x = -W_P to x = W_dP
+        Q_pndiffP = -q * sp.integrate(lambda x: self._calc_nP_for_x(x) - no_p, (-W_P, -W_dP))
+        self.known_quantities['Q_pndiffP'] = Q_pndiffP
+
+    def calc_Q_pndiffN(self):
+        if not self.should_calculate(needed=['po_N', 'W_N', 'W_dN']):
+            return
+        po_n = self.known_quantities['po_N']
+        W_N = self.known_quantities['W_N']
+        W_dN = self.known_quantities['W_dN']
+        #integrate _calc_nP_for_x(x) - po_n over x from x = W_dN to x = W_N
+        Q_pndiffN = q * sp.integrate(lambda x: self._calc_pN_for_x(x) - po_n, (W_dN, W_N))
+        self.known_quantities['Q_pndiffN'] = Q_pndiffN
