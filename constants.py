@@ -231,3 +231,6 @@ v_p_sat_ = 8.290e6
 
 COULOUMBS_PER_SECOND_TO_AMPERES = units.A / units.C * units.s
 """The conversion factor from C/s to A."""
+
+COULOUMBS_SQUARE_PER_EV_CENTIMETER_SQUARE_TO_FARADS_PER_ANGSTROM_SQUARE = units.F / units.cm**2 * units.eV / units.C**2 * angstroms**2 * 6.24150974e18
+"""The conversion factor from C^2/(eV cm^2) to F/angstrom^2."""
