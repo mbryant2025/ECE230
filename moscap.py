@@ -18,8 +18,8 @@ class MOSCAP(ECE230):
             'X_ox' : None, #Gate-oxide thickness
             'N_aB' : None, #Substrate acceptor concentration
             'N_dB' : None, #Substrate donor concentration
-            'Q_f' : 0 * C / cm**-2, #Fixed oxide charge density
-            'Q_it' : 0 * C / cm**-2, #The interface-trap charge density
+            'Q_f' : None, #Fixed oxide charge density
+            'Q_it' : None, #The interface-trap charge density
             'phi_PM' : None, #Metal-p-side contact potential difference
             'phi_NM' : None, #Metal-n-side contact potential difference
             'phi_FB' : None, #Fermi potential difference
@@ -116,7 +116,7 @@ class MOSCAP(ECE230):
         po_B = N_aB
         inner1 = sp.exp(-beta * Vdep_SCB) + beta * Vdep_SCB - 1
         inner2 = sp.exp(beta * Vdep_SCB) - beta * Vdep_SCB - 1
-        Q_SCB_at_V_SCB = -math.sqrt(2) * epsilon_Si_ * k_BT_300K_ / (q_ * L_DB) * sp.sqrt(inner1 + (no_B / po_B) * inner2) * C / cm**3
+        Q_SCB_at_V_SCB = -math.sqrt(2) * epsilon_Si_ * k_BT_300K_ / (q_ * L_DB) * sp.sqrt(inner1 + (no_B / po_B) * inner2) * C / cm**2
         self.known_quantities['Q_SCB@V_SCB'] = Q_SCB_at_V_SCB
 
     def calc_Q_G_at_V_GB(self):
@@ -173,7 +173,7 @@ class MOSCAP(ECE230):
         Q_f = self.known_quantities['Q_f']
         Q_it = self.known_quantities['Q_it']
         C_ox = self.known_quantities['C_ox']
-        V_FBN = phi_PM - ((Q_f + Q_it) / C_ox)
+        V_FBN = phi_PM - ((Q_f + Q_it) / C_ox) * COULOUMB_PER_FARAD_TO_VOLT
         self.known_quantities['V_FBN'] = V_FBN
 
     def calc_W_dB_at_V_GB(self):

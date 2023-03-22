@@ -24,6 +24,8 @@ def remove_units(expr):
         The expression with units removed.
 
     """
+    if isinstance(expr, (int, float)):
+        return expr
     if not expr.has(Quantity):
         return expr
     units = expr.subs({x: 1 for x in expr.args if not x.has(Quantity)})
@@ -234,3 +236,6 @@ COULOUMBS_PER_SECOND_TO_AMPERES = units.A / units.C * units.s
 
 COULOUMBS_SQUARE_PER_EV_CENTIMETER_SQUARE_TO_FARADS_PER_ANGSTROM_SQUARE = units.F / units.cm**2 * units.eV / units.C**2 * angstroms**2 * 6.24150974e18
 """The conversion factor from C^2/(eV cm^2) to F/angstrom^2."""
+
+COULOUMB_PER_FARAD_TO_VOLT = units.volt / units.C * units.F
+"""The conversion factor from C/F to V."""
