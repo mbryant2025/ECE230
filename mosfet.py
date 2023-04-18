@@ -3,13 +3,15 @@ from moscap import MOSCAP
 from constants import *
 import sympy as sp
 from sympy.physics.units import *
+import numpy as np
 
 class MOSFET(MOSCAP):
 
     def __init__(self, T = 300 * kelvin):
         super().__init__(T)
         self.calculation_functions.extend([self.calc_mu_pP, self.calc_mu_nP, self.calc_V_DSat, self.calc_V_TN_at_V_BS, self.calc_V_DSat,
-                                           self.calc_Bias_Range, self.calc_K_n, self.calc_I_D, self.calc_V_GS])
+                                           self.calc_Bias_Range, self.calc_K_n, self.calc_K_N, self.calc_I_D, self.calc_V_GS, self.calc_k_prime_n,
+                                           self.calc_width_to_length])
 
         mosfet_quantities = {
             'Bias Range': None, #Bias Range
@@ -30,7 +32,9 @@ class MOSFET(MOSCAP):
             'V_DSat' : None, #Saturation Source-Drain Voltage
             'I_D' : None, #Drain Current
             'K_n' : None, #Electron mobility factor
-
+            'K_N' : None, #Electron mobility factor
+            'k_prime_n' : None, #Electron mobility factor
+            'width_to_length' : None, #Width to Length Ratio
         }
 
         self.known_quantities.update(mosfet_quantities)
@@ -101,14 +105,38 @@ class MOSFET(MOSCAP):
 
 
     def calc_K_n(self):
-        if not self.should_calculate(needed=['mu_nch', 'C_ox', 'W_ch', 'L_ch']):
-            return
-        mu_nch = self.get_known_quantity('mu_nch')
-        C_ox = self.get_known_quantity('C_ox')
-        W_ch = self.get_known_quantity('W_ch')
-        L_ch = self.get_known_quantity('L_ch')
-        K_n = mu_nch * C_ox * W_ch / (2*L_ch)
-        self.known_quantities['K_n'] = K_n
+        if self.should_calculate(needed=['mu_nch', 'C_ox', 'W_ch', 'L_ch']):
+            mu_nch = self.get_known_quantity('mu_nch')
+            C_ox = self.get_known_quantity('C_ox')
+            W_ch = self.get_known_quantity('W_ch')
+            L_ch = self.get_known_quantity('L_ch')
+            K_n = mu_nch * C_ox * W_ch / (2*L_ch)
+            self.known_quantities['K_n'] = K_n
+        #if have K_N, then K_n = 0.5*K_N
+        if self.should_calculate(needed=['K_N']):
+            K_N = self.get_known_quantity('K_N')
+            self.known_quantities['K_n'] = 0.5*K_N
+
+
+    def calc_K_N(self):
+        if self.should_calculate(needed=['mu_nch', 'C_ox', 'W_ch', 'L_ch']):
+            mu_nch = self.get_known_quantity('mu_nch')
+            C_ox = self.get_known_quantity('C_ox')
+            W_ch = self.get_known_quantity('W_ch')
+            L_ch = self.get_known_quantity('L_ch')
+            K_N = mu_nch * C_ox * W_ch / (L_ch)
+            self.known_quantities['K_N'] = K_N
+        #if have K_n, then K_N = 2*K_n
+        if self.should_calculate(needed=['K_n']):
+            K_n = self.get_known_quantity('K_n')
+            self.known_quantities['K_N'] = 2*K_n
+
+    def calc_k_prime_n(self):
+        if self.should_calculate(needed=['mu_nch', 'C_ox']):
+            mu_nch = self.get_known_quantity('mu_nch')
+            C_ox = self.get_known_quantity('C_ox')
+            k_prime_n = mu_nch * C_ox
+            self.known_quantities['k_prime_n'] = k_prime_n
 
     def calc_I_D(self):
         if not self.should_calculate(needed=['K_n', 'V_DS', 'Bias Range', 'V_DSat']):
@@ -124,4 +152,17 @@ class MOSFET(MOSCAP):
         else:
             I_D = 0
         self.known_quantities['I_D'] = I_D
+
+    def calc_width_to_length(self):
+        if self.should_calculate(needed=['W_ch', 'L_ch']):
+            W_ch = self.get_known_quantity('W_ch')
+            L_ch = self.get_known_quantity('L_ch')
+            width_to_length = W_ch / L_ch
+            self.known_quantities['width_to_length'] = width_to_length
+        #ratio is K_n / k_prime_n * 2
+        if self.should_calculate(needed=['K_n', 'k_prime_n']):
+            K_n = self.get_known_quantity('K_n')
+            k_prime_n = self.get_known_quantity('k_prime_n')
+            self.known_quantities['width_to_length'] = K_n / k_prime_n * 2
+
 
