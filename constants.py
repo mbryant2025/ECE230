@@ -24,6 +24,8 @@ def remove_units(expr):
         The expression with units removed.
 
     """
+    if expr is None:
+        return None
     if isinstance(expr, (int, float)):
         return expr
     if not expr.has(Quantity):

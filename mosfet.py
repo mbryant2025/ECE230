@@ -9,7 +9,7 @@ class MOSFET(MOSCAP):
 
     def __init__(self, T = 300 * kelvin):
         super().__init__(T)
-        self.calculation_functions.extend([self.calc_mu_pP, self.calc_mu_nP, self.calc_V_DSat, self.calc_V_TN_at_V_BS, self.calc_V_DSat,
+        self.calculation_functions.extend([self.calc_V_TB, self.calc_mu_pP, self.calc_mu_nP, self.calc_V_DSat, self.calc_V_TN_at_V_BS, self.calc_V_DSat,
                                            self.calc_Bias_Range, self.calc_K_n, self.calc_K_N, self.calc_I_D, self.calc_V_GS, self.calc_k_prime_n,
                                            self.calc_width_to_length])
 
@@ -38,6 +38,17 @@ class MOSFET(MOSCAP):
         }
 
         self.known_quantities.update(mosfet_quantities)
+
+    def calc_V_TB(self):
+        if not self.should_calculate(needed=['V_FBN', 'phi_FB', 'C_ox', 'N_aB', 'C_ox']):
+            return
+        V_FB = remove_units(self.known_quantities['V_FBN'])
+        phi_FB = remove_units(self.known_quantities['phi_FB'])
+        C_ox = remove_units(self.known_quantities['C_ox'])
+        N_aB = remove_units(self.known_quantities['N_aB'])
+        V_TB = (V_FB + 2 * phi_FB + 1/C_ox * sp.sqrt(4 * q_ * epsilon_Si_ * N_aB * phi_FB)) * volt
+        self.known_quantities['V_TB'] = V_TB
+
 
     def calc_mu_pP(self):
         if not self.should_calculate(needed=['N_aB']):
@@ -69,7 +80,7 @@ class MOSFET(MOSCAP):
         C_ox = remove_units(self.known_quantities['C_ox'])
         N_aB = remove_units(self.known_quantities['N_aB'])
         V_BS = remove_units(self.known_quantities['V_BS'])
-        V_TN = V_FB * volt + 2 * phi_FB  * volt + 1/C_ox * sp.sqrt(2 * q_ * epsilon_Si_ * N_aB * (2 * phi_FB - V_BS)) * volt
+        V_TN = V_FB * volt + 2 * phi_FB * volt + 1/C_ox * sp.sqrt(2 * q_ * epsilon_Si_ * N_aB * (2 * phi_FB - V_BS)) * volt
         self.known_quantities['V_TN@V_BS'] = V_TN
 
     def calc_V_DSat(self):

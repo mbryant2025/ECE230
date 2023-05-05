@@ -35,11 +35,13 @@ class MOSAMP(MOSFET):
 
         print('Note: V_DS is modified in calc_Q() to find the Q point.')
 
-        if not self.should_calculate(needed=['V_DD', 'RD', 'RS', 'K_n', 'V_DSat']):
+        if not self.should_calculate(needed=['V_DD', 'RD', 'RS', 'K_n']):
             return
         V_DD = remove_units(self.known_quantities['V_DD'])
         RD = remove_units(self.known_quantities['RD'])
         RS = remove_units(self.known_quantities['RS'])
+
+        print('Calculating Q point...')
 
         MAX_V_DS = 15 #Assume V_DS is less than 15V for the Q point
         V_DS = np.linspace(0, MAX_V_DS, 5000)
