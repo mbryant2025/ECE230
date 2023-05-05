@@ -65,6 +65,7 @@ class Diode(Silicon):
             'L_nP' : None, #Diffusion length for electrons on p-type side
             'L_p_rec_N' : None, #Recombination length for holes on n-type side
             'L_p_gen_N' : None, #Generation length for electrons on p-type side
+            'L_n_rec_P' : None, #Recombination length for electrons on p-type side
             'J_nxdiffP' : None, #Electronurrent density for p-type side diffusion current
             'J_pxdiffN' : None, #Hole current density for n-type side diffusion current
             'J_Ddiff' : None, #Diode diffusion current density
@@ -658,51 +659,35 @@ class Diode(Silicon):
         self.known_quantities['Q_pndiffN'] = Q_pndiffN
 
     def calc_C_pndiffN(self):
-        if not self.should_calculate(needed=['L_pN', 'N_d', 'V_PN']):
+        if not self.should_calculate(needed=['L_p_rec_N', 'N_d', 'V_PN']):
             return
-        L_pN = self.known_quantities['L_pN']
+        L_pN = self.known_quantities['L_p_rec_N']
         N_d = self.known_quantities['N_d']
         V_PN = self.known_quantities['V_PN']
-        C_pndiffN = q**2 * n_i_300K**2 * L_pN * (sp.exp(V_PN / k_BT_300K_DIVIDED_q)) / (N_d * k_BT_300K)# * COULOUMBS_SQUARE_PER_EV_CENTIMETER_SQUARE_TO_FARADS_PER_ANGSTROM_SQUARE
+        C_pndiffN = remove_units(q**2 * n_i_300K**2 * L_pN * (sp.exp(V_PN / k_BT_300K_DIVIDED_q)) / (N_d * k_BT_300K)) * F / cm**2# * COULOUMBS_SQUARE_PER_EV_CENTIMETER_SQUARE_TO_FARADS_PER_ANGSTROM_SQUARE
         self.known_quantities['C_pn*diffN'] = C_pndiffN
 
     def calc_C_pndiffP(self):
-        if not self.should_calculate(needed=['L_nP', 'N_a', 'V_PN']):
+        if not self.should_calculate(needed=['L_n_rec_P', 'N_a', 'V_PN']):
             return
-        L_nP = self.known_quantities['L_nP']
+        L_nP = self.known_quantities['L_n_rec_P']
         N_a = self.known_quantities['N_a']
         V_PN = self.known_quantities['V_PN']
-        C_pndiffP = q**2 * n_i_300K**2 * L_nP * (sp.exp(V_PN / k_BT_300K_DIVIDED_q)) / (N_a * k_BT_300K) * COULOUMBS_SQUARE_PER_EV_CENTIMETER_SQUARE_TO_FARADS_PER_ANGSTROM_SQUARE
+        C_pndiffP = remove_units(q**2 * n_i_300K**2 * L_nP * (sp.exp(V_PN / k_BT_300K_DIVIDED_q)) / (N_a * k_BT_300K)) * F / cm**2 # * COULOUMBS_SQUARE_PER_EV_CENTIMETER_SQUARE_TO_FARADS_PER_ANGSTROM_SQUARE
         self.known_quantities['C_pn*diffP'] = C_pndiffP
 
     def calc_C_pndiff(self):
-        if not self.should_calculate(needed=['V_PN', 'N_a', 'N_d', 'L_nP', 'L_pN']):
+        if not self.should_calculate(needed=['C_pn*diffP', 'C_pn*diffN']):
             return
-        V_PN = self.known_quantities['V_PN']
-        N_a = self.known_quantities['N_a']
-        N_d = self.known_quantities['N_d']
-        L_nP = self.known_quantities['L_nP']
-        L_pN = self.known_quantities['L_pN']
-        C_pndiffN0 = q**2 * n_i_300K**2 * L_pN / (N_d * k_BT_300K)
-        C_pndiffP0 = q**2 * n_i_300K**2 * L_nP / (N_a * k_BT_300K)
-        C_pndiff = (C_pndiffN0 + C_pndiffP0) * sp.exp(V_PN / k_BT_300K_DIVIDED_q) * COULOUMBS_SQUARE_PER_EV_CENTIMETER_SQUARE_TO_FARADS_PER_ANGSTROM_SQUARE
+        C_pndiffP = self.known_quantities['C_pn*diffP']
+        C_pndiffN = self.known_quantities['C_pn*diffN']
+        C_pndiff = C_pndiffP + C_pndiffN
         self.known_quantities['C_pn*diff'] = C_pndiff
 
     def calc_C_pn(self):
-        if not self.should_calculate(needed=['V_PN', 'N_a', 'N_d', 'L_nP', 'L_pN', 'V_bi']):
+        if not self.should_calculate(needed=['C_pn*diff', 'C_pn*dep_per_area']):
             return
-        V_PN = self.known_quantities['V_PN']
-        N_a = self.known_quantities['N_a']
-        N_d = self.known_quantities['N_d']
-        L_nP = self.known_quantities['L_nP']
-        L_pN = self.known_quantities['L_pN']
-        V_bi = self.known_quantities['V_bi']
-        V_bi_ = remove_units(V_bi)
-        N_a_ = remove_units(N_a)
-        N_d_ = remove_units(N_d)
-        C_pndiffN0 = q**2 * n_i_300K**2 * L_pN / (N_d * k_BT_300K)
-        C_pndiffP0 = q**2 * n_i_300K**2 * L_nP / (N_a * k_BT_300K)
-        C_pndiff0 = C_pndiffN0 + C_pndiffP0
-        C_pndep0 = sp.sqrt(q_ * epsilon_Si_ * N_a_ * N_d_ / (2 * (N_a_ + N_d_) * V_bi_)) * farad / angstroms**2
-        C_pn = C_pndep0 * sp.sqrt(V_bi / (V_bi - V_PN)) + C_pndiff0 * sp.exp(V_PN / k_BT_300K_DIVIDED_q) * COULOUMBS_SQUARE_PER_EV_CENTIMETER_SQUARE_TO_FARADS_PER_ANGSTROM_SQUARE
+        C_pndiff = self.known_quantities['C_pn*diff']
+        C_pndep = self.known_quantities['C_pn*dep_per_area']
+        C_pn = C_pndiff + C_pndep
         self.known_quantities['C_pn'] = C_pn

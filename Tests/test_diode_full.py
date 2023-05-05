@@ -145,14 +145,14 @@ class TestDiode(TestCase):
         # C_pn*diffP * a = 4.767550e-14
         # C_pn*diffN * a = 1.927878e-15
         # C_pn*diff * a = 4.960338e-14
-        # C_pn * a = 5.8.059568e-12
+        # C_pn * a = 8.059568e-12
 
         pprint(d.get_known_quantities())
-        self.assertAlmostEqual(remove_units(d.get_known_quantity('C_pn*dep')), 8.009965e-12, delta=0.001 * 8.009965e-12)
+        self.assertAlmostEqual(remove_units(d.get_known_quantity('C_pn*dep_per_area')) * a, 8.009965e-12, delta=0.001 * 8.009965e-12)
         self.assertAlmostEqual(remove_units(d.get_known_quantity('C_pn*diffP')) * a, 4.767550e-14, delta=0.001 * 4.767550e-14)
         self.assertAlmostEqual(remove_units(d.get_known_quantity('C_pn*diffN')) * a, 1.927878e-15, delta=0.001 * 1.927878e-15)
         self.assertAlmostEqual(remove_units(d.get_known_quantity('C_pn*diff')) * a, 4.960338e-14, delta=0.001 * 4.960338e-14)
-        self.assertAlmostEqual(remove_units(d.get_known_quantity('C_pn')) * a, 5.8059568e-12, delta=0.001 * 5.8059568e-12)
+        self.assertAlmostEqual(remove_units(d.get_known_quantity('C_pn')) * a, 8.059568e-12, delta=0.001 * 8.059568e-12)
 
     def test_capacitances_equilibrium(self):
         d = self.diode
@@ -165,6 +165,6 @@ class TestDiode(TestCase):
         # C_pn*diff * a = 4.526508e-19
 
         pprint(d.get_known_quantities())
-        self.assertAlmostEqual(remove_units(d.get_known_quantity('C_pn*dep')), 6.258887e-12, delta=0.001 * 6.258887e-12)
+        self.assertAlmostEqual(remove_units(d.get_known_quantity('C_pn*dep_per_area')) * a, 6.258887e-12, delta=0.001 * 6.258887e-12)
         self.assertAlmostEqual(remove_units(d.get_known_quantity('C_pn*diff')) * a, 4.526508e-19, delta=0.001 * 4.526508e-19)
 
