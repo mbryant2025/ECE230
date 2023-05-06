@@ -11,7 +11,7 @@ class MOSFET(MOSCAP):
         super().__init__(T)
         self.calculation_functions.extend([self.calc_V_TB, self.calc_mu_pP, self.calc_mu_nP, self.calc_V_DSat, self.calc_V_TN_at_V_BS, self.calc_V_DSat,
                                            self.calc_Bias_Range, self.calc_K_n, self.calc_K_N, self.calc_I_D, self.calc_V_GS, self.calc_k_prime_n,
-                                           self.calc_width_to_length])
+                                           self.calc_width_to_length, self.calc_cutoff_freq])
 
         mosfet_quantities = {
             'Bias Range': None, #Bias Range
@@ -35,6 +35,7 @@ class MOSFET(MOSCAP):
             'K_N' : None, #Electron mobility factor
             'k_prime_n' : None, #Electron mobility factor
             'width_to_length' : None, #Width to Length Ratio
+            'cutoff_freq' : None, #Cutoff Frequency
         }
 
         self.known_quantities.update(mosfet_quantities)
@@ -100,19 +101,18 @@ class MOSFET(MOSCAP):
         self.known_quantities['V_GS'] = V_GS
 
     def calc_Bias_Range(self):
-        if not self.should_calculate(needed=['V_DSat', 'V_DS', 'V_TB']):
+        if not self.should_calculate(needed=['V_DSat', 'V_DS', 'V_TB', 'V_GS']):
             return
         V_DSat = self.get_known_quantity('V_DSat')
         V_DS = self.get_known_quantity('V_DS')
         V_TB = self.get_known_quantity('V_TB')
-        if V_DS > V_DSat:
+        V_GS = self.get_known_quantity('V_GS')
+        if V_DS > V_DSat and V_GS > V_TB:
             self.known_quantities['Bias Range'] = 'Saturation'
         else:
             self.known_quantities['Bias Range'] = 'Linear'
-        if self.should_calculate(needed=['V_GS']):
-            V_GS = self.get_known_quantity('V_GS')
-            if V_GS < V_TB:
-                self.known_quantities['Bias Range'] = 'Cut-Off'
+        if V_GS < V_TB:
+            self.known_quantities['Bias Range'] = 'Cut-Off'
 
 
     def calc_K_n(self):
@@ -190,4 +190,12 @@ class MOSFET(MOSCAP):
             self.known_quantities['width_to_length'] = width_to_length
 
 
-
+    def calc_cutoff_freq(self):
+        #Need V_GS, V_TB, L_Ch
+        if self.should_calculate(needed=['V_GS', 'V_TB', 'L_ch', 'mu_nch']):
+            V_GS = self.get_known_quantity('V_GS')
+            V_TB = self.get_known_quantity('V_TB')
+            L_ch = self.get_known_quantity('L_ch')
+            mu_nch = self.get_known_quantity('mu_nch')
+            cutoff_freq = 3 * mu_nch * (V_GS - V_TB) / (4 * math.pi * L_ch**2)
+            self.known_quantities['cutoff_freq'] = cutoff_freq

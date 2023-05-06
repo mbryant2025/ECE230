@@ -158,14 +158,24 @@ class MOSCAP(Silicon):
         epsilon_xB = -Q_SCB_at_V_SCB / epsilon_Si_ * volt / cm
         self.known_quantities['epsilon_xB@V_TN'] = epsilon_xB
 
+    # def calc_V_TB(self):
+    #     if not self.should_calculate(needed=['V_ox@V_TN', 'V_SCB@V_TN', 'phi_PM']):
+    #         return
+    #     V_ox = self.known_quantities['V_ox@V_TN']
+    #     V_SCB_at_V_TN = self.known_quantities['V_SCB@V_TN']
+    #     phi_PM = self.known_quantities['phi_PM']
+    #     V_TN = V_SCB_at_V_TN + phi_PM + V_ox
+    #     self.known_quantities['V_TB'] = V_TN
+
     def calc_V_TB(self):
-        if not self.should_calculate(needed=['V_ox@V_TN', 'V_SCB@V_TN', 'phi_PM']):
+        if not self.should_calculate(needed=['V_FBN', 'phi_FB', 'C_ox', 'N_aB']):
             return
-        V_ox = self.known_quantities['V_ox@V_TN']
-        V_SCB_at_V_TN = self.known_quantities['V_SCB@V_TN']
-        phi_PM = self.known_quantities['phi_PM']
-        V_TN = V_SCB_at_V_TN + phi_PM + V_ox
-        self.known_quantities['V_TB'] = V_TN
+        V_FB = remove_units(self.known_quantities['V_FBN'])
+        phi_FB = remove_units(self.known_quantities['phi_FB'])
+        C_ox = remove_units(self.known_quantities['C_ox'])
+        N_aB = remove_units(self.known_quantities['N_aB'])
+        V_TB = (V_FB + 2 * phi_FB + 1/C_ox * sp.sqrt(4 * q_ * epsilon_Si_ * N_aB * phi_FB)) * volt
+        self.known_quantities['V_TB'] = V_TB
 
     def calc_C_ox(self):
         if not self.should_calculate(needed=['X_ox']):
