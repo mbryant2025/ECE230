@@ -137,6 +137,18 @@ class MOSFET(MOSCAP):
             L_ch = self.get_known_quantity('L_ch')
             K_N = mu_nch * C_ox * W_ch / (L_ch)
             self.known_quantities['K_N'] = K_N
+
+        # If we have I_D, Bias Range, V_DS, V_GS, V_TB, then we can calculate K_N
+        if self.should_calculate(needed=['I_D', 'Bias Range', 'V_DS', 'V_GS', 'V_TB']):
+            I_D = self.get_known_quantity('I_D')
+            V_DS = self.get_known_quantity('V_DS')
+            V_GS = self.get_known_quantity('V_GS')
+            V_TB = self.get_known_quantity('V_TB')
+            bias_range = self.get_known_quantity('Bias Range')
+            if bias_range == 'Linear':
+                K_N = I_D / ((V_GS - V_TB) * V_DS - 0.5 * V_DS**2)
+                self.known_quantities['K_N'] = K_N
+
         #if have K_n, then K_N = 2*K_n
         if self.should_calculate(needed=['K_n']):
             K_n = self.get_known_quantity('K_n')
@@ -170,10 +182,12 @@ class MOSFET(MOSCAP):
             L_ch = self.get_known_quantity('L_ch')
             width_to_length = W_ch / L_ch
             self.known_quantities['width_to_length'] = width_to_length
-        #ratio is K_n / k_prime_n * 2
-        if self.should_calculate(needed=['K_n', 'k_prime_n']):
-            K_n = self.get_known_quantity('K_n')
+        #If we have K_N and k_prime_n, then we can calculate width_to_length
+        if self.should_calculate(needed=['K_N', 'k_prime_n']):
+            K_N = self.get_known_quantity('K_N')
             k_prime_n = self.get_known_quantity('k_prime_n')
-            self.known_quantities['width_to_length'] = K_n / k_prime_n * 2
+            width_to_length = K_N / k_prime_n
+            self.known_quantities['width_to_length'] = width_to_length
+
 
 
